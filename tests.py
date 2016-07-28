@@ -41,3 +41,17 @@ def test_next_turn():
         curr_jobs = len(game.jobs)
         assert curr_jobs > prev_jobs
 
+def test_assign_job():
+    """
+    calls next_turn and assigns job to a machine
+    """
+    game.next_turn()
+    assigned_job_id = None
+    for job in game.jobs:
+        if game.jobs[job]["turn"] < game.jobs[job]["turns_required"]: 
+            game.assign_job(job)
+            assigned_job_id = job
+    assert "machine_id" in game.jobs[assigned_job_id]
+    assigned_machine = game.jobs[assigned_job_id]["machine_id"]
+    assert game.machines[assigned_machine] < 64
+

@@ -15,9 +15,12 @@ class Game():
 
     optimization heurstic:
         * track free memory at each turn
+        * assign jobs to machine with lowest available memory sufficient for job
         * create/delete machines to accomodate new jobs
     """
+
     base_url = "http://job-queue-dev.elasticbeanstalk.com/games"
+
     def __init__(self, long_game=False):
         game_instance = requests.post(Game.base_url, data={"long": long_game}).json()
         self.game_id = game_instance["id"]
@@ -40,6 +43,10 @@ class Game():
         if self.current_turn > self.total_turns:
             return None
         else:
+            # update current job turns
+            for job in self.jobs:
+                self.jobs[job]["turn"] += 1
+            # add new jobs 
             for job in turn["jobs"]:
                 self.jobs[job["id"]] = job
 
@@ -60,14 +67,41 @@ class Game():
         requests.delete(Game.base_url + "/" + str(self.game_id) + "/machines/" + 
                 str(machine_id))
         self.machines.pop(machine_id, None)
+    
+    def assign_job(self, job_id):
+        """
+        assigns job to the machine with the lowest 
+        available memory sufficient for the job
+        updates jobs dictionary and machine's available memory
+        """
+        memory_required = self.jobs[job_id]["memory_required"]
+        sorted_machines = sorted(self.machines, 
+                key=lambda x: self.machines[x])
+        for machine in sorted_machines:
+            if self.machines[machine] > memory_required:
+                # assign to machine
+                requests.post(Game.base_url + "/" + str(self.game_id) + 
+                        "/machines/" + str(machine) + "/job_assignments",
+                        data={"job_ids": [job_id]})
+                # mark assignment in jobs dictionary
+                self.jobs[job_id]["machine_id"] = machine
+                # designate memory
+                self.machines[machine] -= memory_required
+        # else create a new machine and recursively call itself
+        self.create_machine()
+        self.assign_job(job_id)
 
-    def compute_available_memory(self):
+    def manage_jobs(self):
         """
-        updates the available memory on the machines list
-        based on assigned jobs and available machines
+        at each turn allocates machines to jobs
         """
-        memory = 0 
-        for job in self.jobs:
-            if job["turn"] <= job["turns_required"]:
-                memory_needed = job
+        pass
+
+    def run_show(self):
+        """
+        runs the game
+        """
+        pass
+        
+
 
