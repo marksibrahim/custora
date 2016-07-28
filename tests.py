@@ -11,3 +11,33 @@ def test_instantiation():
     assert type(game.game_id) is int
     # default long 
     assert game.total_turns == 50
+
+def test_machine_creation():
+    """
+    ensures there are at least three machines are available after creation
+    """
+    game.create_machine(n=3) 
+    memory = 0
+    for machine in game.machines:
+        memory += 64
+    assert memory >= 64*3
+
+def test_delete_machine():
+    """
+    tests whether machine is deleted
+    """
+    for machine in game.machines:
+        machine_id = machine
+    game.delete_machine(machine_id)
+    assert machine_id not in game.machines
+
+def test_next_turn():
+    """
+    test whether next turn correctly updates jobs
+    assumes at least one new job appears at a turn
+    """
+    prev_jobs = len(game.jobs)
+    if not game.next_turn():
+        curr_jobs = len(game.jobs)
+        assert curr_jobs > prev_jobs
+
