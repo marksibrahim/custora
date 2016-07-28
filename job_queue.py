@@ -30,7 +30,9 @@ class Game():
         self.total_turns = 500 if long_game else 50
         self.current_turn = 0
 
+        # {job_id: {"turn": 2, "turns_required": 6, "memory_requried": 20, "machine_id": 202}}
         self.jobs = {}
+        # {machine_id: memory_free}
         self.machines = {}
 
     def next_turn(self):
@@ -77,6 +79,7 @@ class Game():
         memory_required = self.jobs[job_id]["memory_required"]
         sorted_machines = sorted(self.machines, 
                 key=lambda x: self.machines[x])
+        assigned = False
         for machine in sorted_machines:
             if self.machines[machine] > memory_required:
                 # assign to machine
@@ -87,9 +90,12 @@ class Game():
                 self.jobs[job_id]["machine_id"] = machine
                 # designate memory
                 self.machines[machine] -= memory_required
-        # else create a new machine and recursively call itself
-        self.create_machine()
-        self.assign_job(job_id)
+                assigned = True
+                break
+        if not assigned:
+            # create a new machine and recursively call itself
+            self.create_machine()
+            self.assign_job(job_id)
 
     def manage_jobs(self):
         """
