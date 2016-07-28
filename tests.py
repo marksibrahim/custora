@@ -11,6 +11,9 @@ def test_instantiation():
     assert type(game.game_id) is int
     # default long 
     assert game.total_turns == 50
+    # test long game
+    long_game = job_queue.Game(long_game=True)
+    assert long_game.total_turns == 500
 
 def test_machine_creation():
     """

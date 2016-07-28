@@ -28,8 +28,10 @@ allocate enough machines to run jobs as they come in while minimizing cost.
 * track jobs and machines they're assigned to
 
 for job in jobs:
-    1. if assigned: do nothing
-    2. if not assigned:
-        a. assign to machine with smallest available memory sufficient for job ("greedy")
-        b. if none are available, allocate to a new machine
-    3. delete any unused machines (ones with completed jobs)
+* three states: running, finished, needs to run
+
+1. if assigned: do nothing
+2. if not assigned:
+    a. assign to machine with smallest available memory sufficient for job ("greedy")
+    b. if none are available, allocate to a new machine
+3. delete any unused machines (ones with completed jobs)

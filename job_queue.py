@@ -30,7 +30,7 @@ class Game():
         self.total_turns = 500 if long_game else 50
         self.current_turn = 0
 
-        # {job_id: {"turn": 2, "turns_required": 6, "memory_requried": 20, "machine_id": 202}}
+        # {job_id: {"turn": 2, "turns_required": 6, "memory_required": 20, "machine_id": 202}}
         self.jobs = {}
         # {machine_id: memory_free}
         self.machines = {}
@@ -101,13 +101,30 @@ class Game():
         """
         at each turn allocates machines to jobs
         """
-        pass
+        for job in self.jobs:
+            # not assigned
+            if "machine_id" not in self.jobs[job]:
+                self.assign_job(job)
+            # job finished running
+            elif self.jobs[job]["turn"] >=  self.jobs[job]["turns_required"]:
+                # free machine's memory
+                machine_id = self.jobs[job]["machine_id"]
+                memory = self.jobs[job]["memory_required"]
+                self.machines[machine_id] -= memory
+        # delete free machines
+        for machine in self.machines:
+            if self.machines[machine] <= 0:
+                self.delete_machine(machine)
 
     def run_show(self):
         """
-        runs the game
+        runs the game by advancing turns and calling manage_jobs
         """
-        pass
+        while self.current_turn <= self.total_turns:
+            next_turn = self.next_turn()
+            if not next_turn:
+                break
+            self.manage_jobs()
         
 
 
