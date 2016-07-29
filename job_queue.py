@@ -40,7 +40,7 @@ class Game():
 
     def next_turn(self):
         """
-        moves game to the next turn, updating current_turn and jobs dictionary
+        moves game to the next turn, updating jobs dictionary
         returns none if there is no next turn
         """
         turn = requests.get(Game.base_url + "/" + str(self.game_id) + "/next_turn").json()
@@ -48,9 +48,6 @@ class Game():
         if self.current_turn > self.total_turns:
             return None
         else:
-            # update current job turns
-            for job in self.jobs:
-                self.jobs[job]["turn"] += 1
             # add new jobs 
             for job in turn["jobs"]:
                 self.jobs[job["id"]] = job
@@ -118,7 +115,7 @@ class Game():
             if "machine_id" not in self.jobs[job]: 
                 self.assign_job(job)
             # job finished running
-            elif self.jobs[job]["turn"] >=  self.jobs[job]["turns_required"] and not finished:
+            elif self.current_turn - self.jobs[job]["turn"] >  self.jobs[job]["turns_required"] and not finished:
                 # free machine's memory
                 machine_id = self.jobs[job]["machine_id"]
                 memory = self.jobs[job]["memory_required"]

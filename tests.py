@@ -56,5 +56,6 @@ def test_assign_job():
             assigned_job_id = job
     assert "machine_id" in game.jobs[assigned_job_id]
     assigned_machine = game.jobs[assigned_job_id]["machine_id"]
-    assert game.machines[assigned_machine] < 64
+    memory_required = game.jobs[assigned_job_id]["memory_required"]
+    assert game.machines[assigned_machine] < 64 - memory_required + 1
 
