@@ -22,7 +22,10 @@ class Game():
     base_url = "http://job-queue-dev.elasticbeanstalk.com/games"
 
     def __init__(self, long_game=False):
-        game_instance = requests.post(Game.base_url, data={"long": long_game}).json()
+        if long_game:
+            game_instance = requests.post(Game.base_url, data={"long": True}).json()
+        else:
+            game_instance = requests.post(Game.base_url).json()
         self.game_id = game_instance["id"]
 
         # boolean indicating whether game_type is long or short
@@ -51,6 +54,7 @@ class Game():
             # add new jobs 
             for job in turn["jobs"]:
                 self.jobs[job["id"]] = job
+            return turn
 
     def create_machine(self, n=1):
         """
@@ -83,13 +87,15 @@ class Game():
         for machine in sorted_machines:
             if self.machines[machine] > memory_required:
                 # assign to machine
-                requests.post(Game.base_url + "/" + str(self.game_id) + 
+                response = requests.post(Game.base_url + "/" + str(self.game_id) + 
                         "/machines/" + str(machine) + "/job_assignments",
-                        data={"job_ids": [job_id]})
+                        data={"job_ids": "[" + str(job_id) + "]"})
+                # throws exception if bad http request
+                response.raise_for_status()
                 # mark assignment in jobs dictionary
                 self.jobs[job_id]["machine_id"] = machine
                 # designate memory
-                self.machines[machine] -= memory_required
+                self.machines[machine] = self.machines.get(machine, 0) -memory_required
                 assigned = True
                 break
         if not assigned:
@@ -102,29 +108,48 @@ class Game():
         at each turn allocates machines to jobs
         """
         for job in self.jobs:
+            # check whether job is finished
+            try:
+                finished = self.jobs[job]["finished"]
+            except KeyError:
+                self.jobs[job]["finished"] = False
+                finished = False
             # not assigned
-            if "machine_id" not in self.jobs[job]:
+            if "machine_id" not in self.jobs[job]: 
                 self.assign_job(job)
             # job finished running
-            elif self.jobs[job]["turn"] >=  self.jobs[job]["turns_required"]:
+            elif self.jobs[job]["turn"] >=  self.jobs[job]["turns_required"] and not finished:
                 # free machine's memory
                 machine_id = self.jobs[job]["machine_id"]
                 memory = self.jobs[job]["memory_required"]
-                self.machines[machine_id] -= memory
-        # delete free machines
-        for machine in self.machines:
-            if self.machines[machine] <= 0:
-                self.delete_machine(machine)
+                self.machines[machine_id] = self.machines.get(machine_id, 0) + memory
+                self.jobs[job]["finished"] = True
 
-    def run_show(self):
+    def run_show(self, debug=False):
         """
         runs the game by advancing turns and calling manage_jobs
+        debug = True prints game status after each turn
         """
-        while self.current_turn <= self.total_turns:
-            next_turn = self.next_turn()
-            if not next_turn:
-                break
+        self.manage_jobs()
+        next_turn = self.next_turn()
+        i = 0
+        while next_turn:
             self.manage_jobs()
+            if debug: 
+                i += 1
+                print(next_turn)
+                print("======")
+                for job in self.jobs:
+                    print(job, self.jobs[job]["machine_id"], 
+                            self.jobs[job]["memory_required"])
+                print("======")
+                for machine in self.machines:
+                    print(machine, self.machines[machine])
+                print("======")
+                print("======")
+                if i > 10:
+                    break
+            next_turn = self.next_turn()
         
 
 
