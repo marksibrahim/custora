@@ -7,6 +7,7 @@ written in Python3
 """
 
 import requests
+import random
 import sys
 
 
@@ -162,21 +163,26 @@ class Game():
                 self.machines[machine_id] = self.machines.get(machine_id, 0) + memory
                 self.jobs[job]["finished"] = True
 
-    def run_show(self, debug=False, delay=0):
+    def run_show(self, debug=False, delay=90):
         """
         runs the game by advancing turns and calling manage_jobs
         debug = True prints game status after each turn
-        delay is a parameter between 0 and 50
-        0: delay everything
-        50: delay nothing
+        delay is a parameter between 0 and 100
+        0: no delays
+        100: delay everything
+        optimal delay parameter: 90 (see jupyter notebook)
         """
         self.manage_jobs(delay=False)
         next_turn = self.next_turn()
         i = 1
+
+        delay_sample_size = delay*(self.total_turns) // 100
+        turns_to_delay = random.sample(range(self.total_turns),
+                delay_sample_size)
         while next_turn:
             i += 1
             print("turn: " + str(i), end="\r")
-            if delay == 0 or i % delay == 0:
+            if i in turns_to_delay:
                 self.manage_jobs(delay=True)
             else:
                 self.manage_jobs(delay=False)
