@@ -1,7 +1,6 @@
 # Job Queue Game
 allocate enough machines to run jobs with little delay while minimizing cost.
 
-
 ## Installation
 * Install [Python 3](https://www.python.org/downloads/)
     * verify by typing python into a terminal and ensuring prompt states python 3.x
@@ -31,6 +30,29 @@ To debug, import job_queue and instantiate a game:
 ```
 
 ## Heuristic 
+
+### Greedy Algorithm
+
+The algorithm works by assigning new jobs to the machine with lowest available memory sufficient for the job. 
+This greedy approach aims to use the full capacity of running machines before creating a new machine for the job. 
+
+### Delay Parameter
+
+In addition, there is an optional delay parameter between 0 and 100. A value of 0 implies not jobs are delayed. 
+Instead if no running machine has available capacity to run the job, a new machine is created. 
+A value of 100, implies all jobs run on one machine (with jobs exceeding the available memory delayed).
+Delay parameter values in between 0 and 100 delay the corresponding proportion of turns. 
+For example, a value of 25 delays 25% of turns in the given game. 
+
+### A Reasonable Solution
+
+Since this problem is NP hard, the delay parameter allows us to tune the proportion of turns to delay for a given game to find
+a reasonable compromise between delaying a job and the cost running a new machine. 
+Scanning through the parameter space (see jupyter notebook "optimize_delay_parameter") a delay value of 90 seems to yield the best total_score: 
+![total_score_delay_turns](total_score_delay_turns.png)
+![total_score_delay_jobs](total_score_delay_jobs.png)
+
+
 This is an NP hard problem, what heuristic have you chosen to approximate the optimal solution(s), why?
 
 Please don't implement: What other heuristics can you think of to approximate the optimal solution(s)? How would they compare with your implementation?
