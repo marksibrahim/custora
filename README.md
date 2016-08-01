@@ -19,7 +19,7 @@ For short game
 
 For long game
 ```bash
-    python job_queue.py 
+    python job_queue.py long
 ```
 
 To debug, import job_queue and instantiate a game:

@@ -75,7 +75,7 @@ class Game():
                 str(machine_id))
         self.machines.pop(machine_id, None)
     
-    def assign_job(self, job_id, delay=True):
+    def assign_job(self, job_id, delay=False):
         """
         assigns job to the machine with the lowest 
         available memory sufficient for the job
@@ -89,7 +89,7 @@ class Game():
                 key=lambda x: self.machines[x])
         assigned = False
         for i, machine in enumerate(sorted_machines):
-            if self.machines[machine] > memory_required or ((i + 1 == len(sorted_machines)) and delay):
+            if self.machines[machine] > memory_required:
                 # assign to machine
                 response = requests.post(Game.base_url + "/" + str(self.game_id) + 
                         "/machines/" + str(machine) + "/job_assignments",
@@ -100,14 +100,22 @@ class Game():
                 self.jobs[job_id]["machine_id"] = machine
                 # designate memory
                 self.machines[machine] = self.machines.get(machine, 0) -memory_required
-                if i + 1 == len(sorted_machines):
-                    self.jobs_delayed += 1
                 assigned = True
                 break
         if not assigned:
-            # create a new machine and recursively call itself
-            self.create_machine()
-            self.assign_job(job_id)
+            if delay and sorted_machines:
+                machine = sorted_machines[-1]
+                requests.post(Game.base_url + "/" + str(self.game_id) + 
+                    "/machines/" + str(machine) + "/job_assignments",
+                    data={"job_ids": "[" + str(job_id) + "]"})
+                self.jobs[job_id]["machine_id"] = machine
+                # designate memory
+                self.machines[machine] = self.machines.get(machine, 0) -memory_required
+                self.jobs_delayed += 1
+            else:
+                # create a new machine and recursively call itself
+                self.create_machine()
+                self.assign_job(job_id)
 
     def terminate_free_machines(self):
         """
@@ -118,10 +126,10 @@ class Game():
             if "machine_id" in self.jobs[job]:
                 occupied_machines[self.jobs[job]["machine_id"]] = True
         unoccupied_machines = [k for k in self.machines if k not in occupied_machines]
-        for occupied_machine in occupied_machines:
-            self.machines.pop(occupied_machine, None)
+        for unoccupied_machine in unoccupied_machines:
+            self.machines.pop(unoccupied_machine, None)
             requests.delete(Game.base_url + "/" + str(self.game_id) + 
-                "/machines/" + str(occupied_machine))
+                "/machines/" + str(unoccupied_machine))
 
     def terminate_all_machines(self):        
         """
@@ -154,30 +162,36 @@ class Game():
                 self.machines[machine_id] = self.machines.get(machine_id, 0) + memory
                 self.jobs[job]["finished"] = True
 
-    def run_show(self, debug=False, delay=False):
+    def run_show(self, debug=False, delay=0):
         """
         runs the game by advancing turns and calling manage_jobs
         debug = True prints game status after each turn
+        delay is a parameter between 0 and 50
+        0: delay everything
+        50: delay nothing
         """
-        self.manage_jobs(delay=delay)
+        self.manage_jobs(delay=False)
         next_turn = self.next_turn()
         i = 1
         while next_turn:
             i += 1
-            print("turn: ", i)
-            self.manage_jobs(delay=delay)
+            print("turn: " + str(i), end="\r")
+            if delay == 0 or i % delay == 0:
+                self.manage_jobs(delay=True)
+            else:
+                self.manage_jobs(delay=False)
             self.terminate_free_machines()
             if debug: 
                 print("======")
                 print("======")
                 print(next_turn)
                 print("======")
-                for job in self.jobs:
-                    print(job, self.jobs[job]["machine_id"], 
-                            self.jobs[job]["memory_required"])
-                print("======")
-                for machine in self.machines:
-                    print(machine, self.machines[machine])
+                #for job in self.jobs:
+                #    print(job, self.jobs[job]["machine_id"], 
+                #            self.jobs[job]["memory_required"])
+                #print("======")
+                #for machine in self.machines:
+                #    print(machine, self.machines[machine])
                 print("======")
             next_turn = self.next_turn()
 
@@ -188,7 +202,7 @@ class Game():
         while not game_info["completed"]:
             self.next_turn()
             i +=1 
-            print("turn: ", i)
+            print("turn: " + str(i), end="\r")
             game_info = requests.get(Game.base_url + "/" + str(self.game_id)).json()
         return game_info
 
