@@ -192,13 +192,6 @@ class Game():
                 print("======")
                 print(next_turn)
                 print("======")
-                #for job in self.jobs:
-                #    print(job, self.jobs[job]["machine_id"], 
-                #            self.jobs[job]["memory_required"])
-                #print("======")
-                #for machine in self.machines:
-                #    print(machine, self.machines[machine])
-                print("======")
             next_turn = self.next_turn()
 
         self.terminate_all_machines() 
