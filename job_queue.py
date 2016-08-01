@@ -7,6 +7,7 @@ written in Python3
 """
 
 import requests
+import sys
 
 
 class Game():
@@ -37,6 +38,9 @@ class Game():
         self.jobs = {}
         # {machine_id: memory_free}
         self.machines = {}
+        
+        self.jobs_delayed = 0
+
 
     def next_turn(self):
         """
@@ -44,8 +48,8 @@ class Game():
         returns none if there is no next turn
         """
         turn = requests.get(Game.base_url + "/" + str(self.game_id) + "/next_turn").json()
-        self.current_turn = turn["current_turn"]
-        if self.current_turn > self.total_turns:
+
+        if turn["current_turn"] > self.total_turns:
             return None
         else:
             # add new jobs 
@@ -71,18 +75,21 @@ class Game():
                 str(machine_id))
         self.machines.pop(machine_id, None)
     
-    def assign_job(self, job_id):
+    def assign_job(self, job_id, delay=True):
         """
         assigns job to the machine with the lowest 
         available memory sufficient for the job
+            if delay is true, then job is assigned to machine with largest
+            available memory 
+            if false, then job is assigned to a new machine
         updates jobs dictionary and machine's available memory
         """
         memory_required = self.jobs[job_id]["memory_required"]
         sorted_machines = sorted(self.machines, 
                 key=lambda x: self.machines[x])
         assigned = False
-        for machine in sorted_machines:
-            if self.machines[machine] > memory_required:
+        for i, machine in enumerate(sorted_machines):
+            if self.machines[machine] > memory_required or ((i + 1 == len(sorted_machines)) and delay):
                 # assign to machine
                 response = requests.post(Game.base_url + "/" + str(self.game_id) + 
                         "/machines/" + str(machine) + "/job_assignments",
@@ -93,6 +100,8 @@ class Game():
                 self.jobs[job_id]["machine_id"] = machine
                 # designate memory
                 self.machines[machine] = self.machines.get(machine, 0) -memory_required
+                if i + 1 == len(sorted_machines):
+                    self.jobs_delayed += 1
                 assigned = True
                 break
         if not assigned:
@@ -100,7 +109,30 @@ class Game():
             self.create_machine()
             self.assign_job(job_id)
 
-    def manage_jobs(self):
+    def terminate_free_machines(self):
+        """
+        deletes machines without any jobs assigned to them
+        """
+        occupied_machines = {}
+        for job in self.jobs:
+            if "machine_id" in self.jobs[job]:
+                occupied_machines[self.jobs[job]["machine_id"]] = True
+        unoccupied_machines = [k for k in self.machines if k not in occupied_machines]
+        for occupied_machine in occupied_machines:
+            self.machines.pop(occupied_machine, None)
+            requests.delete(Game.base_url + "/" + str(self.game_id) + 
+                "/machines/" + str(occupied_machine))
+
+    def terminate_all_machines(self):        
+        """
+        terminates all running machines
+        """
+        for machine in self.machines:
+            requests.delete(Game.base_url + "/" + str(self.game_id) + 
+                    "/machines/" + str(machine))
+        self.machines = {}
+
+    def manage_jobs(self, delay=False):
         """
         at each turn allocates machines to jobs
         """
@@ -113,7 +145,7 @@ class Game():
                 finished = False
             # not assigned
             if "machine_id" not in self.jobs[job]: 
-                self.assign_job(job)
+                self.assign_job(job, delay=delay)
             # job finished running
             elif self.current_turn - self.jobs[job]["turn"] >  self.jobs[job]["turns_required"] and not finished:
                 # free machine's memory
@@ -122,18 +154,22 @@ class Game():
                 self.machines[machine_id] = self.machines.get(machine_id, 0) + memory
                 self.jobs[job]["finished"] = True
 
-    def run_show(self, debug=False):
+    def run_show(self, debug=False, delay=False):
         """
         runs the game by advancing turns and calling manage_jobs
         debug = True prints game status after each turn
         """
-        self.manage_jobs()
+        self.manage_jobs(delay=delay)
         next_turn = self.next_turn()
-        i = 0
+        i = 1
         while next_turn:
-            self.manage_jobs()
+            i += 1
+            print("turn: ", i)
+            self.manage_jobs(delay=delay)
+            self.terminate_free_machines()
             if debug: 
-                i += 1
+                print("======")
+                print("======")
                 print(next_turn)
                 print("======")
                 for job in self.jobs:
@@ -143,10 +179,29 @@ class Game():
                 for machine in self.machines:
                     print(machine, self.machines[machine])
                 print("======")
-                print("======")
-                if i > 10:
-                    break
             next_turn = self.next_turn()
-        
 
+        self.terminate_all_machines() 
+        game_info = requests.get(Game.base_url + "/" + str(self.game_id)).json()
+        # advance game until all jobs are complete 
+            # requires more than 50 or 500 turns until jobs finish running
+        while not game_info["completed"]:
+            self.next_turn()
+            i +=1 
+            print("turn: ", i)
+            game_info = requests.get(Game.base_url + "/" + str(self.game_id)).json()
+        return game_info
+
+# if file is executed not imported:
+if __name__ == "__main__":        
+    args = sys.argv
+    try:
+        if args[1] == "long":
+            long_game = True
+            print("starting long game")
+    except IndexError:
+        long_game = False
+        print("starting short game")
+    game = Game(long_game=long_game)
+    print(game.run_show())
 
