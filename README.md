@@ -65,7 +65,7 @@ The delay value can be tuned by instantiating a game with an optinal parameter f
     game.run_show(delay=25)
 ```
 
-For a long game, the default delay is .
+For a long game, a reasonable delay value seems to also be between 80-100. The default value is also 90.
 
 ## Implementation Details
 
