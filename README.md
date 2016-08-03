@@ -78,7 +78,7 @@ This allows for constant time lookups no matter how many jobs or machines are ru
 a class level variable (which isn't duplicated for each instance) containing the base url. The methods have descriptive names such as `next_turn()`, `create_machine()`, and so on. They also include doc strings outlining the expected inputs, procedure, and output.
 
 The algorithm is executed by calling `run_show()` on an instance of the game, which calls `next_turn()` to advance the game's turn, `manage_jobs()` to 
-assign jobs according to the greedy algorithm and delay factor, as well as `terminate_free_machiens()` which deletes machines without any running jobs 
+assign jobs according to the greedy algorithm and delay factor, as well as `terminate_free_machines()` which deletes machines without any running jobs 
 after each turn. At each turn, the algorithm loops through the jobs in the queue. If a job is not assigned to a machine, the algorithm assigns the job to a machine---doing so, requires looping through running machines. However, looking up information about machines or job at each turn is O(1). The total 
 runtime complexity in the worst case is number of unassigned jobs * number of running machines per turn.
 
